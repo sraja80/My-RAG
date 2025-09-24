@@ -1,0 +1,147 @@
+```zip
+rag_agent_project/
+├── main.py
+├── requirements.txt
+├── README.md
+```
+
+**main.py**
+```python
+import numpy as np
+
+# Sample knowledge base
+documents = [
+    "The capital of France is Paris.",
+    "The Eiffel Tower is in Paris.",
+    "France is in Europe.",
+    "The capital of Germany is Berlin.",
+    "Berlin has the Brandenburg Gate."
+]
+
+# Build TF-IDF matrix for documents
+def build_tfidf(docs):
+    vocab = set()
+    for doc in docs:
+        vocab.update(doc.lower().split())
+    vocab = sorted(list(vocab))
+    
+    N = len(docs)
+    V = len(vocab)
+    
+    # Term Frequency (TF)
+    tf = np.zeros((N, V))
+    for i, doc in enumerate(docs):
+        words = doc.lower().split()
+        word_count = len(words)
+        for word in words:
+            if word in vocab:
+                j = vocab.index(word)
+                tf[i, j] += 1 / word_count
+    
+    # Document Frequency (DF)
+    df = np.sum(tf > 0, axis=0)
+    
+    # Inverse Document Frequency (IDF)
+    idf = np.log(N / (df + 1e-10))
+    
+    # TF-IDF
+    tfidf = tf * idf
+    
+    return tfidf, vocab, idf
+
+# Vectorize a query using TF-IDF
+def vectorize_query(query, vocab, idf):
+    query = query.lower()
+    words = query.split()
+    word_count = len(words)
+    qvec = np.zeros(len(vocab))
+    for word in words:
+        if word in vocab:
+            j = vocab.index(word)
+            qvec[j] += 1 / word_count
+    qvec_idf = qvec * idf
+    return qvec_idf
+
+# Cosine similarity
+def cosine_similarity(vec1, vec2):
+    dot = np.dot(vec1, vec2)
+    norm1 = np.linalg.norm(vec1)
+    norm2 = np.linalg.norm(vec2)
+    return dot / (norm1 * norm2 + 1e-10)
+
+# Retrieve top-k relevant documents
+def retrieve(query, tfidf, vocab, idf, top_k=1):
+    qvec = vectorize_query(query, vocab, idf)
+    similarities = [cosine_similarity(row, qvec) for row in tfidf]
+    top_indices = np.argsort(similarities)[-top_k:][::-1]
+    return [documents[i] for i in top_indices], [similarities[i] for i in top_indices]
+
+# Generate response (mocked)
+def generate_response(query, retrieved_docs):
+    context = " ".join(retrieved_docs)
+    return f"Query: {query}\nRetrieved context: {context}\nAnswer: Based on the context, the answer is derived from '{context}'."
+
+def main():
+    # Precompute TF-IDF
+    tfidf_matrix, vocabulary, idf_vector = build_tfidf(documents)
+    
+    # Interactive loop
+    print("Simple RAG Agent: Type your question (or 'quit' to exit)")
+    while True:
+        query = input("Enter your question: ")
+        if query.lower() == 'quit':
+            break
+        retrieved_docs, scores = retrieve(query, tfidf_matrix, vocabulary, idf_vector, top_k=2)
+        response = generate_response(query, retrieved_docs)
+        print(response)
+        print()
+
+if __name__ == "__main__":
+    main()
+```
+
+**requirements.txt**
+```text
+numpy
+```
+
+**README.md**
+```markdown
+# Simple RAG Agent Project
+
+This is a basic Retrieval-Augmented Generation (RAG) agent implemented in Python. It uses TF-IDF for document retrieval and a mock generation step to produce answers based on retrieved context.
+
+## Setup Instructions
+
+1. **Prerequisites**:
+   - Python 3.6 or higher
+   - Install required packages: `pip install -r requirements.txt`
+
+2. **Running the Project**:
+   - Navigate to the project directory: `cd rag_agent_project`
+   - Run the main script: `python main.py`
+   - Enter a question when prompted (e.g., "What is the capital of France?").
+   - Type `quit` to exit.
+
+3. **How It Works**:
+   - The system has a small knowledge base of facts (in `main.py`).
+   - It retrieves relevant documents using TF-IDF and cosine similarity.
+   - It generates a response by combining the query with retrieved context (mock generation; in a full system, use an LLM).
+
+4. **Example Interaction**:
+   ```
+   Enter your question: What is the capital of France?
+   Query: What is the capital of France?
+   Retrieved context: The capital of France is Paris. France is in Europe.
+   Answer: Based on the context, the answer is derived from 'The capital of France is Paris. France is in Europe.'.
+   ```
+
+5. **Customization**:
+   - Add more documents to the `documents` list in `main.py`.
+   - Modify `top_k` in the `retrieve` function to adjust how many documents are retrieved.
+   - Replace the `generate_response` function with an LLM API call for better answers.
+
+## Notes
+- This is a minimal implementation for demonstration. For production, consider using embeddings (e.g., BERT) and an LLM (e.g., via OpenAI API).
+- The project avoids external file I/O and network calls for simplicity.
+```
