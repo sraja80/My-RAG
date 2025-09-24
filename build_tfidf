@@ -1,0 +1,83 @@
+import numpy as np
+
+# Sample knowledge base (documents)
+documents = [
+    "The capital of France is Paris.",
+    "The Eiffel Tower is in Paris.",
+    "France is in Europe.",
+    "The capital of Germany is Berlin.",
+    "Berlin has the Brandenburg Gate."
+]
+
+# Build TF-IDF matrix for documents
+def build_tfidf(docs):
+    # Build vocabulary
+    vocab = set()
+    for doc in docs:
+        vocab.update(doc.lower().split())
+    vocab = sorted(list(vocab))
+    
+    N = len(docs)
+    V = len(vocab)
+    
+    # Term Frequency (TF)
+    tf = np.zeros((N, V))
+    for i, doc in enumerate(docs):
+        words = doc.lower().split()
+        word_count = len(words)
+        for word in words:
+            if word in vocab:
+                j = vocab.index(word)
+                tf[i, j] += 1 / word_count
+    
+    # Document Frequency (DF)
+    df = np.sum(tf > 0, axis=0)
+    
+    # Inverse Document Frequency (IDF)
+    idf = np.log(N / (df + 1e-10))  # Avoid division by zero
+    
+    # TF-IDF
+    tfidf = tf * idf
+    
+    return tfidf, vocab, idf
+
+# Precompute TF-IDF for the documents
+tfidf_matrix, vocabulary, idf_vector = build_tfidf(documents)
+
+# Vectorize a query using TF-IDF
+def vectorize_query(query, vocab, idf):
+    query = query.lower()
+    words = query.split()
+    word_count = len(words)
+    qvec = np.zeros(len(vocab))
+    for word in words:
+        if word in vocab:
+            j = vocab.index(word)
+            qvec[j] += 1 / word_count
+    qvec_idf = qvec * idf
+    return qvec_idf
+
+# Cosine similarity between two vectors
+def cosine_similarity(vec1, vec2):
+    dot = np.dot(vec1, vec2)
+    norm1 = np.linalg.norm(vec1)
+    norm2 = np.linalg.norm(vec2)
+    return dot / (norm1 * norm2 + 1e-10)  # Avoid division by zero
+
+# Retrieve top-k relevant documents
+def retrieve(query, tfidf, vocab, idf, top_k=1):
+    qvec = vectorize_query(query, vocab, idf)
+    similarities = [cosine_similarity(row, qvec) for row in tfidf]
+    top_indices = np.argsort(similarities)[-top_k:][::-1]
+    return [documents[i] for i in top_indices], [similarities[i] for i in top_indices]
+
+# Generate response (mocked - in a full RAG, feed context to an LLM)
+def generate_response(query, retrieved_docs):
+    context = " ".join(retrieved_docs)
+    return f"Query: {query}\nRetrieved context: {context}\nGenerated answer: Based on the context, the answer is derived from '{context}'."
+
+# Example usage: Run the agent with a query
+sample_query = "What is the capital of France?"
+retrieved_docs, scores = retrieve(sample_query, tfidf_matrix, vocabulary, idf_vector, top_k=2)
+response = generate_response(sample_query, retrieved_docs)
+print(response)
