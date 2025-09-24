@@ -1,3 +1,11 @@
+This uses a basic TF-IDF vectorizer for retrieval (implemented from scratch using NumPy, as we don't have scikit-learn). The "generation" part is mocked by concatenating the retrieved context into a simple response string—for a real-world system, you'd integrate an LLM (e.g., via API) to generate more natural answers based on the retrieved context.
+This system includes:
+
+A small knowledge base of documents.
+Retrieval: Computes TF-IDF vectors for documents and queries, then uses cosine similarity to find top-k relevant documents.
+Output: A mock generation that incorporates the retrieved context.
+
+
 How It Works
 
 Retrieval: The build_tfidf function creates a TF-IDF matrix from the documents. For a query, it computes a similar vector and finds the most similar documents via cosine similarity.
